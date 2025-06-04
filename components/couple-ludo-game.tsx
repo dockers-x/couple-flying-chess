@@ -107,26 +107,59 @@ export default function CoupleLudoGame() {
   const loadTasks = useCallback(
     async (mode: GameMode, lang: Language) => {
       setIsLoadingTasks(true)
+      console.log(`Loading tasks for mode: ${mode}, language: ${lang}`)
+
       try {
         // Try to load language-specific tasks first
         let response = await fetch(`/tasks/${mode}-${lang}.json`)
+        console.log(`First attempt response status: ${response.status}`)
 
         // If language-specific tasks don't exist, fall back to Chinese
         if (!response.ok && lang !== "zh") {
+          console.log(`Falling back to Chinese tasks for mode: ${mode}`)
           response = await fetch(`/tasks/${mode}.json`)
+          console.log(`Fallback response status: ${response.status}`)
         }
 
         if (!response.ok) {
-          throw new Error(`Failed to load tasks for mode: ${mode}`)
+          throw new Error(`Failed to load tasks for mode: ${mode}, status: ${response.status}`)
         }
 
         const tasks: string[] = await response.json()
+        console.log(`Loaded ${tasks.length} tasks:`, tasks.slice(0, 3))
+
+        if (tasks.length === 0) {
+          throw new Error(`Task file is empty for mode: ${mode}`)
+        }
+
         setTaskQueue(shuffleArray(tasks))
       } catch (error) {
         console.error("Error loading tasks:", error)
-        const fallbackTasks = translations
-          ? [translations.tasks.emptyQueue]
-          : ["做一个鬼脸", "给对方一个赞美", "分享一个小秘密"]
+
+        // 提供更丰富的备用任务
+        const fallbackTasks = [
+          "学猫叫三声",
+          "一起恶搞自拍",
+          "给对方说悄悄话",
+          "给对方按小腿1分钟",
+          "对视5秒",
+          "喂对方喝水",
+          "手牵手30秒",
+          "拥抱30秒",
+          "给对方唱首歌",
+          "一起喝一杯水",
+          "拍一段表白的视频留作纪念",
+          "给对方梳头发",
+          "给对方按摩捶背1分钟",
+          "亲吻对方手背30秒",
+          "拥抱一分钟",
+          "一起恶搞自拍",
+          "亲吻一下对方的手",
+          "从背后抱对方1分钟",
+          "亲吻对方额头",
+        ]
+
+        console.log(`Using fallback tasks: ${fallbackTasks.length} tasks`)
         setTaskQueue(shuffleArray(fallbackTasks))
       } finally {
         setIsLoadingTasks(false)
@@ -245,6 +278,8 @@ export default function CoupleLudoGame() {
   }
 
   const triggerTask = (type: TaskType, PCOnCell: PlayerColor) => {
+    console.log(`Triggering task. Queue length: ${taskQueue.length}, Type: ${type}, Player: ${PCOnCell}`)
+
     if (taskQueue.length === 0) {
       console.warn("Task queue is empty!")
       const emptyMessage = translations?.tasks.emptyQueue || "任务队列空了！休息一下吧！"
@@ -254,7 +289,13 @@ export default function CoupleLudoGame() {
     }
 
     const currentTaskDescription = taskQueue[0]
-    setTaskQueue((prev) => [...prev.slice(1), prev[0]])
+    console.log(`Selected task: ${currentTaskDescription}`)
+
+    setTaskQueue((prev) => {
+      const newQueue = [...prev.slice(1), prev[0]]
+      console.log(`New queue length: ${newQueue.length}`)
+      return newQueue
+    })
 
     let executor: PlayerColor
     if (type === "star") {
